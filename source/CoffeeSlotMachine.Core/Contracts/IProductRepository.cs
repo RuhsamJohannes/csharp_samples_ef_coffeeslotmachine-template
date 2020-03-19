@@ -5,5 +5,7 @@ namespace CoffeeSlotMachine.Core.Contracts
 {
     public interface IProductRepository
     {
+        Product[] GetAllProducts();
+        Product GetProductById(int id);
     }
 }

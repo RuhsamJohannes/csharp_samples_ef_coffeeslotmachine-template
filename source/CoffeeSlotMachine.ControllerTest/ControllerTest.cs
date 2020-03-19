@@ -78,7 +78,7 @@ namespace CoffeeSlotMachine.ControllerTest
                 Assert.AreEqual("Cappuccino", orders[0].Product.Name, "Produktname Cappuccino");
             }
         }
-
+        /*
         [TestMethod]
         public void T04_BuyOneCoffee_ExactThrowInOneCoin_CheckCoinsAndOrders()
         {
@@ -103,7 +103,7 @@ namespace CoffeeSlotMachine.ControllerTest
         public void T07_BuyMoreCoffees_UntilDonation_CheckCoinsAndOrders()
         {
             throw new NotImplementedException();
-        }
+        }*/
 
     }
 }

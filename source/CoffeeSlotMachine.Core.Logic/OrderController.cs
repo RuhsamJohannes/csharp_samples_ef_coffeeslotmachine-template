@@ -3,6 +3,7 @@ using CoffeeSlotMachine.Core.Entities;
 using CoffeeSlotMachine.Persistence;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace CoffeeSlotMachine.Core.Logic
 {
@@ -32,7 +33,8 @@ namespace CoffeeSlotMachine.Core.Logic
         /// <returns></returns>
         public IEnumerable<Product> GetProducts()
         {
-            throw new NotImplementedException();
+            return _productRepository.GetAllProducts()
+                .OrderBy(p => p.Name);
         }
 
         /// <summary>
@@ -41,7 +43,19 @@ namespace CoffeeSlotMachine.Core.Logic
         /// <param name="product"></param>
         public Order OrderCoffee(Product product)
         {
-            throw new NotImplementedException();
+            if (product != null)
+            {
+                return new Order()
+                {
+                    ProductId = product.Id,
+                    Time = DateTime.Now,
+                    Product = product
+                };
+            }
+            else
+            {
+                throw new ArgumentNullException(nameof(product));
+            }
         }
 
         /// <summary>
@@ -52,7 +66,70 @@ namespace CoffeeSlotMachine.Core.Logic
         /// <returns>true, wenn die Bestellung abgeschlossen ist</returns>
         public bool InsertCoin(Order order, int coinValue)
         {
-            throw new NotImplementedException();
+            if (order == null)
+            {
+                throw new ArgumentNullException(nameof(order));
+            }
+            else if (coinValue == 0)
+            {
+                throw new ArgumentException(nameof(order));
+            }
+            
+            order.ThrownInCoinValues += coinValue.ToString() + ';';
+            List<Coin> coins = StringCoinValuesToList(order);
+
+            int coinSum = 0;
+
+            foreach (Coin item in coins)
+            {
+                coinSum += item.CoinValue;
+            } 
+
+            if (order.InsertCoin(coinSum))
+            {
+                int difference = coinSum - order.Product.PriceInCents;
+
+                if(difference > 5)
+                {
+
+                }
+
+
+                return true;
+            }
+
+            return false;
+        }
+
+        private List<Coin> StringCoinValuesToList(Order order)
+        {
+            string[] coinsString = order.ThrownInCoinValues?.Split(';');
+            List<Coin> coins = new List<Coin>();
+
+            if (coinsString != null)
+            {
+                for (int i = 0; i < coinsString.Count(); i++)
+                {
+                    if (int.TryParse(coinsString[i], out int value))
+                    {
+                        Coin coin = coins.Find(c => c.CoinValue == value);
+                        if (coin == null)
+                        {
+                            coins.Add(new Coin
+                            {
+                                Amount = +1,
+                                CoinValue = value
+                            });
+                        }
+                        else
+                        {
+                            coin.Amount++;
+                        }
+                    }
+                }
+            }
+
+            return coins;
         }
 
         /// <summary>
@@ -61,7 +138,8 @@ namespace CoffeeSlotMachine.Core.Logic
         /// <returns></returns>
         public IEnumerable<Coin> GetCoinDepot()
         {
-            throw new NotImplementedException();
+            return _coinRepository.GetAllCoins()
+                .OrderBy(c => c.CoinValue);
         }
 
 
@@ -71,7 +149,16 @@ namespace CoffeeSlotMachine.Core.Logic
         /// <returns></returns>
         public string GetCoinDepotString()
         {
-            throw new NotImplementedException();
+            Coin[] coins = GetCoinDepot().ToArray();
+
+            string result = $"{coins[0].Amount}*{coins[0].CoinValue}";
+
+            for (int i = 1; i < coins.Length; i++)
+            {
+                result += $"{coins[i].Amount}*{coins[i].CoinValue}";
+            }
+
+            return result;
         }
 
         /// <summary>
@@ -80,7 +167,7 @@ namespace CoffeeSlotMachine.Core.Logic
         /// <returns></returns>
         public IEnumerable<Order> GetAllOrdersWithProduct()
         {
-            throw new NotImplementedException();
+            return _orderRepository.GetAllWithProduct();
         }
 
         /// <summary>
