@@ -29,13 +29,25 @@ namespace CoffeeSlotMachine.Core.Entities
         /// <summary>
         /// Summe der eingeworfenen Cents.
         /// </summary>
-        public int ThrownInCents => -1;
+        public int ThrownInCents => CalculateThrownInCents();
+
+        private int CalculateThrownInCents()
+        {
+            string[] coins = ThrownInCoinValues?.Split(';');
+            int result = 0;
+
+            foreach (var item in coins)
+            {
+                result += Convert.ToInt32(item);
+            }
+
+            return result;
+        }
 
         /// <summary>
         /// Summe der Cents die zurückgegeben werden
         /// </summary>
-        public int ReturnCents => -1;
-
+        public int ReturnCents => ThrownInCents - Product.PriceInCents;
 
         public int ProductId { get; set; }
 
@@ -46,7 +58,8 @@ namespace CoffeeSlotMachine.Core.Entities
         /// Kann der Automat mangels Kleingeld nicht
         /// mehr herausgeben, wird der Rest als Spende verbucht
         /// </summary>
-        public int DonationCents => -1;
+        [NotMapped]
+        public int DonationCents { get; set; }
 
         /// <summary>
         /// Münze wird eingenommen.
@@ -71,9 +84,52 @@ namespace CoffeeSlotMachine.Core.Entities
         /// hängt vom Inhalt der Kasse ab.
         /// </summary>
         /// <param name="coins">Aktueller Zustand des Münzdepots</param>
-        public void FinishPayment(IEnumerable<Coin> coins)
+        public void FinishPayment(List<Coin> coins)
         {
-            throw new NotImplementedException();
+            coins.Reverse();
+
+            int possibleReturn = 0;
+            int returnCencts = ReturnCents;
+            if (returnCencts > 0)
+            {
+                foreach (var coin in coins)
+                {
+                    if (coin.CoinValue <= returnCencts)
+                    {
+                        possibleReturn += coin.CoinValue * coin.Amount;
+                    }
+                }
+
+                if (possibleReturn >= returnCencts)
+                {
+                    foreach (var coin in coins)
+                    {
+                        while (coin.Amount > 0 && returnCencts >= coin.CoinValue)
+                        {
+                            if (string.IsNullOrEmpty(ReturnCoinValues))
+                            {
+                                ReturnCoinValues = $"{coin.CoinValue}";
+                                coin.Amount--;
+                            }
+                            else
+                            {
+                                ReturnCoinValues += $";{coin.CoinValue}";
+                                coin.Amount--;
+                            }
+                            returnCencts -= coin.CoinValue;
+                        }
+                    }
+                }
+            }
+
+            if (returnCencts > 0)
+            {
+                DonationCents = returnCencts;
+            }
+            else
+            {
+                DonationCents = 0;
+            }
         }
     }
 }

@@ -16,10 +16,7 @@ namespace CoffeeSlotMachine.Persistence
             _dbContext = dbContext;
         }
 
-        public IEnumerable<Order> GetAllWithProduct()
-        {
-            throw new NotImplementedException();
-        }
-
+        public IEnumerable<Order> GetAllWithProduct() => _dbContext.Orders.ToList();
+            
     }
 }

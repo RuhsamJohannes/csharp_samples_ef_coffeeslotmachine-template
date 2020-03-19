@@ -45,12 +45,14 @@ namespace CoffeeSlotMachine.Core.Logic
         {
             if (product != null)
             {
-                return new Order()
+                Order order = new Order()
                 {
-                    ProductId = product.Id,
                     Time = DateTime.Now,
                     Product = product
                 };
+
+                _dbContext.Orders.Add(order);
+                return order;
             }
             else
             {
@@ -74,62 +76,39 @@ namespace CoffeeSlotMachine.Core.Logic
             {
                 throw new ArgumentException(nameof(order));
             }
-            
-            order.ThrownInCoinValues += coinValue.ToString() + ';';
-            List<Coin> coins = StringCoinValuesToList(order);
-
-            int coinSum = 0;
-
-            foreach (Coin item in coins)
+            else
             {
-                coinSum += item.CoinValue;
-            } 
-
-            if (order.InsertCoin(coinSum))
-            {
-                int difference = coinSum - order.Product.PriceInCents;
-
-                if(difference > 5)
+                if (String.IsNullOrEmpty(order.ThrownInCoinValues))
                 {
-
+                    order.ThrownInCoinValues += coinValue.ToString();
+                }
+                else
+                {
+                    order.ThrownInCoinValues += $";{coinValue}";
                 }
 
-
-                return true;
-            }
-
-            return false;
-        }
-
-        private List<Coin> StringCoinValuesToList(Order order)
-        {
-            string[] coinsString = order.ThrownInCoinValues?.Split(';');
-            List<Coin> coins = new List<Coin>();
-
-            if (coinsString != null)
-            {
-                for (int i = 0; i < coinsString.Count(); i++)
+                if (order.InsertCoin(coinValue))
                 {
-                    if (int.TryParse(coinsString[i], out int value))
+                    string[] coins = order.ThrownInCoinValues.Split(';');
+                    List<Coin> coinsList = _dbContext.Coins.ToList();
+
+                    foreach (var item in coins)
                     {
-                        Coin coin = coins.Find(c => c.CoinValue == value);
-                        if (coin == null)
-                        {
-                            coins.Add(new Coin
-                            {
-                                Amount = +1,
-                                CoinValue = value
-                            });
-                        }
-                        else
-                        {
-                            coin.Amount++;
-                        }
+                        coinsList.FirstOrDefault(v => v.CoinValue == Convert.ToInt32(item))
+                                    .Amount++;
                     }
+                    _dbContext.UpdateRange(coinsList);
+
+                    order.FinishPayment(coinsList);
+
+                    _dbContext.SaveChanges();
+                    return true;
+                }
+                else
+                {
+                    return false;
                 }
             }
-
-            return coins;
         }
 
         /// <summary>
@@ -139,7 +118,7 @@ namespace CoffeeSlotMachine.Core.Logic
         public IEnumerable<Coin> GetCoinDepot()
         {
             return _coinRepository.GetAllCoins()
-                .OrderBy(c => c.CoinValue);
+                .OrderByDescending(c => c.CoinValue);
         }
 
 
@@ -149,13 +128,20 @@ namespace CoffeeSlotMachine.Core.Logic
         /// <returns></returns>
         public string GetCoinDepotString()
         {
-            Coin[] coins = GetCoinDepot().ToArray();
+            IEnumerable<Coin> coins = GetCoinDepot();
 
-            string result = $"{coins[0].Amount}*{coins[0].CoinValue}";
+            string result = string.Empty;
 
-            for (int i = 1; i < coins.Length; i++)
+            foreach (Coin coin in coins)
             {
-                result += $"{coins[i].Amount}*{coins[i].CoinValue}";
+                if (string.IsNullOrEmpty(result))
+                {
+                    result = $"{coin.Amount}*{coin.CoinValue}";
+                }
+                else
+                {
+                    result += $" + {coin.Amount}*{coin.CoinValue}";
+                }
             }
 
             return result;
